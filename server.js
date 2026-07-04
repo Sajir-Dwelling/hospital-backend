@@ -40,6 +40,19 @@ app.get('/api/health', (_req, res) => {
   res.json({ success: true, message: 'MedCore HMS API is running ✅', env: process.env.NODE_ENV });
 });
 
+app.get('/api/seed-demo', async (req, res) => {
+  const User = require('./models/User');
+  await User.deleteMany({});
+  const users = [
+    { name:'Admin User', email:'admin@hms.com', password:'admin123', role:'admin', avatar:'AD', phone:'01700-000000' },
+    { name:'Dr. Nusrat Khan', email:'doctor@hms.com', password:'doctor123', role:'doctor', avatar:'NK', department:'Cardiology', qualification:'MBBS, MD', experience:'12 years', phone:'01711-001001', rating:4.9 },
+    { name:'Dr. Tariq Hossain', email:'tariq@hms.com', password:'doctor123', role:'doctor', avatar:'TH', department:'Neurology', qualification:'MBBS, MD', experience:'8 years', phone:'01711-002002', rating:4.7 },
+    { name:'Rafiq Ahmed', email:'patient@hms.com', password:'patient123', role:'patient', avatar:'RA', age:45, bloodGroup:'B+', phone:'01800-111111' },
+  ];
+  for (const u of users) await User.create(u);
+  res.json({ success: true, message: 'Seeded successfully!' });
+});
+
 // 404 handler
 app.use((_req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
