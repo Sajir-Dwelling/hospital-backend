@@ -1,3 +1,25 @@
+const sendEmail = require('../utils/sendEmail');
+
+const notifyPatient = (appointment, status) => {
+  const notifyOn = ['Confirmed', 'Cancelled', 'Completed'];
+  if (!notifyOn.includes(status)) return;
+
+  const { patient, doctor } = appointment;
+  if (!patient || !patient.email) return;
+
+  sendEmail({
+    to: patient.email,
+    subject: `Appointment ${status} - MedCore HMS`,
+    html: `
+      <p>Hello ${patient.name},</p>
+      <p>Your appointment with <b>${doctor ? doctor.name : ''}</b>
+      on <b>${appointment.date}</b> at <b>${appointment.time}</b>
+      has been <b>${status.toLowerCase()}</b>.</p>
+      <p>Thank you,<br/>MedCore HMS</p>
+    `,
+  });
+};
+
 const Appointment = require('../models/Appointment');
 const User = require('../models/User');
 const Invoice = require('../models/Invoice');
@@ -135,6 +157,7 @@ const updateStatus = async (req, res, next) => {
     }
 
     await appointment.populate(['patient', 'doctor']);
+    notifyPatient(appointment, status);
     res.json({ success: true, appointment });
   } catch (err) {
     next(err);
@@ -167,6 +190,9 @@ const cancelAppointment = async (req, res, next) => {
 
     appointment.status = 'Cancelled';
     await appointment.save();
+	
+    await appointment.populate(['patient', 'doctor']);
+    notifyPatient(appointment, 'Cancelled');
 
     res.json({ success: true, message: 'Appointment cancelled' });
   } catch (err) {
