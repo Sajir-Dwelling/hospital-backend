@@ -1,4 +1,5 @@
 const Invoice = require('../models/Invoice');
+const { emitToUser } = require('../socket');
 
 // ── SSLCommerz helpers ────────────────────────────────────────────
 const sslBase = () =>
@@ -53,6 +54,7 @@ const finalizePayment = async (body) => {
   invoice.valId = val_id;
   invoice.paymentMethod = v.card_type || 'SSLCommerz';
   await invoice.save();
+  emitToUser(invoice.patient, 'invoice:updated', { invoiceId: invoice._id, reason: 'paid' });
   return true;
 };
 
@@ -124,6 +126,7 @@ const markPaid = async (req, res, next) => {
     invoice.status = 'Paid';
     invoice.paidAt = new Date();
     await invoice.save();
+    emitToUser(invoice.patient, 'invoice:updated', { invoiceId: invoice._id, reason: 'paid' });
 
     res.json({ success: true, invoice });
   } catch (err) {

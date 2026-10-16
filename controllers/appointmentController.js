@@ -1,4 +1,5 @@
 const sendEmail = require('../utils/sendEmail');
+const { emitToUser } = require('../socket');
 
 const notifyPatient = (appointment, status) => {
   const notifyOn = ['Confirmed', 'Cancelled', 'Completed'];
@@ -141,6 +142,7 @@ const updateStatus = async (req, res, next) => {
     appointment.status = status;
     await appointment.save();
 
+    let invoiceCreated = false;
     // Auto-create invoice when completed
     if (status === 'Completed') {
       const existing = await Invoice.findOne({ appointment: appointment._id });
@@ -153,11 +155,17 @@ const updateStatus = async (req, res, next) => {
           description: 'Consultation Fee',
           status: 'Pending',
         });
+        invoiceCreated = true;
       }
     }
 
     await appointment.populate(['patient', 'doctor']);
     notifyPatient(appointment, status);
+
+    // Real-time: tell the patient's open dashboard
+    const patientId = appointment.patient?._id || appointment.patient;
+    emitToUser(patientId, 'appointment:updated', { appointmentId: appointment._id, status });
+    if (invoiceCreated) emitToUser(patientId, 'invoice:updated', { reason: 'created' });
     res.json({ success: true, appointment });
   } catch (err) {
     next(err);
@@ -193,6 +201,7 @@ const cancelAppointment = async (req, res, next) => {
 	
     await appointment.populate(['patient', 'doctor']);
     notifyPatient(appointment, 'Cancelled');
+    emitToUser(appointment.patient?._id || appointment.patient, 'appointment:updated', { appointmentId: appointment._id, status: 'Cancelled' });
 
     res.json({ success: true, message: 'Appointment cancelled' });
   } catch (err) {

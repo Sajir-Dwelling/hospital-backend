@@ -1,13 +1,17 @@
 require('dotenv').config();
+const http = require('http');
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
+const { initSocket } = require('./socket');
 
 // Connect to MongoDB
 connectDB();
 
 const app = express();
+const server = http.createServer(app);
+initSocket(server);
 
 // Middleware
 app.use(cors({
@@ -48,7 +52,7 @@ app.use((_req, res) => {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`\n🚀 Server running on http://localhost:${PORT}`);
   console.log(`📋 Environment: ${process.env.NODE_ENV || 'development'}\n`);
 });
