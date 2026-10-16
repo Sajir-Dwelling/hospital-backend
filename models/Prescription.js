@@ -5,6 +5,9 @@ const medicineSchema = new mongoose.Schema({
   dose:     { type: String, required: true },
   freq:     { type: String, required: true },
   duration: { type: String, required: true },
+  // Optional: set when picked from pharmacy inventory
+  medicine: { type: mongoose.Schema.Types.ObjectId, ref: 'Medicine' },
+  quantity: { type: Number, min: 0, default: 0 },
 });
 
 const prescriptionSchema = new mongoose.Schema({

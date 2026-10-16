@@ -1,20 +1,59 @@
 const Prescription = require('../models/Prescription');
+const Medicine = require('../models/Medicine');
+
+// Give stock back (used when a later step fails)
+const restoreStock = async (deducted) => {
+  for (const d of deducted) {
+    await Medicine.updateOne({ _id: d.id }, { $inc: { stock: d.qty } });
+  }
+};
 
 // @desc    Create prescription
 // @route   POST /api/prescriptions
 // @access  Private (doctor)
 const createPrescription = async (req, res, next) => {
+  const deducted = [];
   try {
     const { patientId, appointmentId, diagnosis, medicines, notes } = req.body;
+    const items = Array.isArray(medicines) ? medicines : [];
 
-    const prescription = await Prescription.create({
-      patient: patientId,
-      doctor: req.user._id,
-      appointment: appointmentId || undefined,
-      diagnosis,
-      medicines: medicines || [],
-      notes: notes || '',
-    });
+    // Deduct stock for items picked from inventory. Atomic: never goes below 0.
+    for (const m of items) {
+      const qty = Number(m.quantity) || 0;
+      if (!m.medicine || qty <= 0) continue;
+
+      const updated = await Medicine.findOneAndUpdate(
+        {
+          _id: m.medicine,
+          stock: { $gte: qty },
+          $or: [{ expiryDate: { $exists: false } }, { expiryDate: null }, { expiryDate: { $gt: new Date() } }],
+        },
+        { $inc: { stock: -qty } },
+        { new: true }
+      );
+
+      if (!updated) {
+        await restoreStock(deducted);
+        res.statusCode = 400;
+        throw new Error(`"${m.name || 'Medicine'}" is out of stock, expired, or has less than ${qty} left`);
+      }
+      deducted.push({ id: updated._id, qty });
+    }
+
+    let prescription;
+    try {
+      prescription = await Prescription.create({
+        patient: patientId,
+        doctor: req.user._id,
+        appointment: appointmentId || undefined,
+        diagnosis,
+        medicines: items,
+        notes: notes || '',
+      });
+    } catch (err) {
+      await restoreStock(deducted);
+      throw err;
+    }
 
     await prescription.populate([
       { path: 'patient', select: 'name email avatar age bloodGroup' },

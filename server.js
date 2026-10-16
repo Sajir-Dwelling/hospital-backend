@@ -30,6 +30,7 @@ app.use('/api/auth',          require('./routes/auth'));
 app.use('/api/appointments',  require('./routes/appointments'));
 app.use('/api/prescriptions', require('./routes/prescriptions'));
 app.use('/api/billing',       require('./routes/billing'));
+app.use('/api/medicines',     require('./routes/medicines'));
 app.use('/api/admin',         require('./routes/admin'));
 app.use('/api/doctors',       require('./routes/doctors'));
 
