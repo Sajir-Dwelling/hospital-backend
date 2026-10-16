@@ -27,6 +27,11 @@ const invoiceSchema = new mongoose.Schema({
   },
   description: { type: String, default: 'Consultation Fee' },
   paidAt: { type: Date },
+
+  // Online payment (SSLCommerz)
+  tranId: { type: String, index: true },
+  valId: { type: String },
+  paymentMethod: { type: String },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Invoice', invoiceSchema);
