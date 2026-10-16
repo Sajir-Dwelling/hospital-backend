@@ -57,6 +57,9 @@ const bookAppointment = async (req, res, next) => {
 
     await appointment.populate(['patient', 'doctor']);
 
+    // Real-time: tell the doctor's open dashboard about the new booking
+    emitToUser(doctorId, 'appointment:new', { appointmentId: appointment._id, date, time });
+
     res.status(201).json({ success: true, appointment });
   } catch (err) {
     next(err);
@@ -202,6 +205,7 @@ const cancelAppointment = async (req, res, next) => {
     await appointment.populate(['patient', 'doctor']);
     notifyPatient(appointment, 'Cancelled');
     emitToUser(appointment.patient?._id || appointment.patient, 'appointment:updated', { appointmentId: appointment._id, status: 'Cancelled' });
+    emitToUser(appointment.doctor?._id || appointment.doctor, 'appointment:updated', { appointmentId: appointment._id, status: 'Cancelled' });
 
     res.json({ success: true, message: 'Appointment cancelled' });
   } catch (err) {
