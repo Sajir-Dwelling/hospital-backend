@@ -218,7 +218,8 @@ const cancelAppointment = async (req, res, next) => {
 // @access  Private (doctor)
 const getTodaySchedule = async (req, res, next) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    // "Today" in the hospital's time zone (server runs in UTC)
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: process.env.APP_TIMEZONE || 'Asia/Dhaka' });
     const appointments = await Appointment.find({
       doctor: req.user._id,
       date: today,
